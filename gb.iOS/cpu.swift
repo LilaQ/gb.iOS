@@ -18,13 +18,13 @@ import CoreFoundation
 
 class REGS {
     public var A,B,C,D,E,F,H,L : UInt8
-    public var AB : UInt16 {
+    public var BC : UInt16 {
         get {
-            return UInt16(A) * 0x100 + UInt16(B)
+            return UInt16(B) * 0x100 + UInt16(C)
         }
         set(v) {
-            A = UInt8(v >> 8)
-            B = UInt8(v & 0b1111_1111)
+            B = UInt8(v >> 8)
+            C = UInt8(v & 0b1111_1111)
         }
     }
     public var DE : UInt16 {
