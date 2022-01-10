@@ -13,6 +13,8 @@
 //  Max # of Sprites/line: 10
 //  Clock speed: 4.194304 MHz
 
+import SwiftUI
+
 class MEMORY {
     
     var BOOTROM : [UInt8] = {
@@ -25,7 +27,7 @@ class MEMORY {
         return arr
     }()
 
-    private var memory: [UInt8] = [UInt8](repeating: 0, count: 0x10000)
+    public var memory: [UInt8] = [UInt8](repeating: 0, count: 0x10000)
     private var BOOTROM_ENABLED = true
     public var PC : UInt16 = 0x0000
     public var SP : UInt16 = 0x0000
@@ -38,10 +40,28 @@ class MEMORY {
         self.PC += 1
         
         //  ... else return just byte at mem
-        if BOOTROM_ENABLED && addr <= 0x100 {
+        return read(addr: addr)
+    }
+    
+    func read(addr: UInt16)->UInt8 {
+        if BOOTROM_ENABLED && addr < 0x100 {
             return BOOTROM[Int(addr)]
         }
         return memory[Int(addr)]
+    }
+    
+    func write(addr: UInt16, val: UInt8) {
+        switch addr {
+        case 0xFF02:    //  serial output; Blarggs tests console output
+            print(Character(UnicodeScalar(memory[0xFF01])), terminator: "")
+            memory[0xFF02] = 0
+        case 0xFF50:    //  write to disable Bootrom
+            print("Disabling BOOTROM")
+            BOOTROM_ENABLED = false
+        default:
+            memory[Int(addr)] = val
+        }
+        
     }
     
     func getByte()->UInt8 {
@@ -57,10 +77,6 @@ class MEMORY {
         getSignedByte(addr: PC)
     }
     
-    func setByte(addr: UInt16, val: UInt8) {
-        memory[Int(addr)] = val
-    }
-    
     @discardableResult
     func getHalfWord(addr: UInt16)->UInt16 {
         let lo = getByte(addr: addr)
@@ -68,7 +84,82 @@ class MEMORY {
         return UInt16(hi) * 0x100 + UInt16(lo)
     }
     
+    func getHalfWord()->UInt16 {
+        getHalfWord(addr: PC)
+    }
+    
     init() {
-        print("MEMORY INIT")
+        print("MEMORY init")
+        
+        print("DEBUG: Fixed value of 0x90 to 0xFF44 for expected VBLANK")
+        memory[0xff44]=0x90
+        
+        print("loading ROM...")
+//        let rom = loadRom(forResource: "tetris", withExtension: "gb") ?? []
+//        let rom = loadRom(forResource: "04-op r,imm", withExtension: "gb") ?? []
+        let rom = loadRom(forResource: "05-op rp", withExtension: "gb") ?? []
+//        let rom = loadRom(forResource: "06-ld r,r", withExtension: "gb") ?? []
+//        let rom = loadRom(forResource: "07-jr,jp,call,ret,rst", withExtension: "gb") ?? []
+//        let rom = loadRom(forResource: "08-misc instrs", withExtension: "gb") ?? []
+        for i in 0..<rom.count {
+            memory[i]=rom[i]
+        }
+        
+    }
+    
+    func loadRom(forResource resource: String, withExtension fileExt: String?) -> [UInt8]? {
+        // See if the file exists.
+        guard let fileUrl: URL = Bundle.main.url(forResource: resource, withExtension: fileExt) else {
+            print("...ROM not found - Exiting")
+            exit(1)
+        }
+
+        do {
+            // Get the raw data from the file.
+            let rawData: Data = try Data(contentsOf: fileUrl)
+            
+            let u8res: [UInt8] = [UInt8](rawData)
+            print("Title    : ", terminator: "")
+            for i in 0x134..<0x144 {
+                print(Character(UnicodeScalar(u8res[i])), terminator: "")
+            }
+            print()
+            print("Cartridge: ", terminator: "")
+            var c = ""
+            switch u8res[0x147] {
+            case 0x00: c = "ROM ONLY"
+            case 0x01: c = "MBC1"
+            case 0x02: c = "MBC1+RAM"
+            case 0x03: c = "MBC1+RAM+BATTERY"
+            case 0x05: c = "MBC2"
+            case 0x06: c = "MBC2+BATTERY"
+            default: c = "UNCLASSIFIED"
+            }
+            print(c)
+            print("ROM Size : ", terminator: "")
+            c = ""
+            switch u8res[0x148] {
+            case 0x00: c = "32 KB (no banking)"
+            case 0x01: c = "64 KB (4 banks)"
+            case 0x02: c = "128 KB (8 banks)"
+            default: c = "UNCLASSIFIED"
+            }
+            print(c)
+            print("RAM Size : ", terminator: "")
+            c = ""
+            switch u8res[0x148] {
+            case 0x00: c = "None"
+            case 0x01: c = "2 KB"
+            case 0x02: c = "8 KB"
+            default: c = "UNCLASSIFIED"
+            }
+            print(c)
+
+            // Return the raw data as an array of bytes.
+            return u8res
+        } catch {
+            // Couldn't read the file.
+            return nil
+        }
     }
 }

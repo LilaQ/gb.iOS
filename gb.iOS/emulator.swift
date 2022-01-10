@@ -29,6 +29,16 @@ class EMULATOR {
         
         while(true) {
             cpu.step()
+            if cpu.interrupts_enabled {
+                //  VBlank interrupt
+                if ((mem.read(addr: 0xFFFF) & 1) & (mem.read(addr: 0xFF0F) & 1)) > 0 {
+                    print("VBlank")
+                    cpu.push(mem.PC, "VBlank interrupt, pushing PC to stack")
+                    mem.PC = 0x40
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1110)  //  clear interrupt
+                }
+                cpu.interrupts_enabled = false
+            }
         }
         
     }
