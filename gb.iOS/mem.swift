@@ -102,7 +102,7 @@ class MEMORY {
 //        let rom = loadRom(forResource: "06-ld r,r", withExtension: "gb") ?? []                    //  PASSED
 //        let rom = loadRom(forResource: "07-jr,jp,call,ret,rst", withExtension: "gb") ?? []        //  PASSED
 //        let rom = loadRom(forResource: "08-misc instrs", withExtension: "gb") ?? []               //  PASSED
-        let rom = loadRom(forResource: "09-op r,r", withExtension: "gb") ?? []
+        let rom = loadRom(forResource: "09-op r,r", withExtension: "gb") ?? []                      //  PASSED
         for i in 0..<rom.count {
             memory[i]=rom[i]
         }

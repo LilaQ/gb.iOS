@@ -316,8 +316,12 @@ class CPU {
             }()
             let CB_HI = (CB & 0b1111_1000)
             switch CB_HI {
+            case 0x00: rl(&reg.pointee, keep_carry: true)
+            case 0x08: rr(&reg.pointee, keep_carry: true)
             case 0x10: rl(&reg.pointee)
             case 0x18: rr(&reg.pointee)
+            case 0x20: rl(&reg.pointee, carry_any: false)
+            case 0x28: rr(&reg.pointee, carry_any: false)
             case 0x30: swap(&reg.pointee)
             case 0x38: srl(&reg.pointee)
             case 0x78: bit(&reg.pointee, (CB_HI>>3)&0b111)
@@ -631,22 +635,39 @@ class CPU {
         debugLog("BIT \(bit)")
     }
     
-    func rl(_ a: inout UInt8) {
-        let oldcarry: UInt8 = regs.flags.C ? 1 : 0
+    func rl(_ a: inout UInt8, carry_any: Bool = true, keep_carry: Bool = false) {
+        let oldcarry: UInt8 = regs.flags.C.int8
         regs.flags.C = (a >> 7) > 0
         regs.flags.N = false
         regs.flags.H = false
-        a = (a << 1) | oldcarry
+        if carry_any {
+            if !keep_carry {
+                a = (a << 1) | oldcarry
+            } else {
+                a = (a << 1) | regs.flags.C.int8
+            }
+        } else {
+            a = (a << 1)
+        }
         regs.flags.Z = a == 0
         debugLog("RL")
     }
     
-    func rr(_ a: inout UInt8) {
-        let oldcarry: UInt8 = regs.flags.C ? 1 : 0
+    func rr(_ a: inout UInt8, carry_any: Bool = true, keep_carry: Bool = false) {
+        let oldcarry: UInt8 = regs.flags.C.int8
+        let msb: UInt8 = a >> 7
         regs.flags.C = (a & 1) > 0
         regs.flags.N = false
         regs.flags.H = false
-        a = (a >> 1) | (oldcarry << 7)
+        if carry_any {
+            if !keep_carry {
+                a = (a >> 1) | (oldcarry << 7)
+            } else {
+                a = (a >> 1) | (regs.flags.C.int8 << 7)
+            }
+        } else {
+            a = (a >> 1) | (msb << 7)
+        }
         regs.flags.Z = a == 0;
         debugLog("RR")
     }
