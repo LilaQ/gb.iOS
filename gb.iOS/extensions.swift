@@ -11,6 +11,24 @@ extension UInt8 {
     var hex:String {
         return String(format: "0x%02X", self)
     }
+    var u16:UInt16 {
+        UInt16(self)
+    }
+    var lowerNibble:UInt8 {
+        self & 0x0f
+    }
+    var upperNibble:UInt8 {
+        self & 0xf0
+    }
+}
+
+extension Bool {
+    var int16:UInt16 {
+        self ? 1 : 0
+    }
+    var int8:UInt8 {
+        self ? 1 : 0
+    }
 }
 
 extension UInt16 {

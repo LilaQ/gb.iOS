@@ -18,8 +18,8 @@ import CoreFoundation
 
 class REGS {
 
-    public var flags : FLAGS
-    public var A,B,C,D,E,H,L : UInt8
+    public var flags : FLAGS = FLAGS()
+    public var A: UInt8 = 0,B: UInt8 = 0,C: UInt8 = 0,D: UInt8 = 0,E: UInt8 = 0,H: UInt8 = 0,L: UInt8 = 0
     public var F: UInt8 {
         get {
             UInt8(flags.Z ? 0b1000_0000 : 0) +
@@ -70,29 +70,10 @@ class REGS {
             L = UInt8(v & 0b1111_1111)
         }
     }
-    init() {
-        debugLog("setting up REGS")
-        A=0
-        B=0
-        C=0
-        D=0
-        E=0
-        H=0
-        L=0
-        self.flags = FLAGS()
-    }
 }
 
 class FLAGS {
-    public var Z,N,H,C,HALT : Bool
-    init() {
-        debugLog("setting up FLAGS")
-        Z=false
-        N=false
-        H=false
-        C=false
-        HALT=false
-    }
+    public var Z:Bool = false,N:Bool = false,H:Bool = false,C:Bool = false,HALT:Bool = false
 }
 
 class CPU {
@@ -111,9 +92,6 @@ class CPU {
     func step() {
         //  check OPCODE
         debugLog("\(mem.PC.hex) [SP: \(mem.SP.hex)][HL: \(regs.HL.hex)][\(regs.flags.Z ? "Z":"-")\(regs.flags.N ? "N":"-")\(regs.flags.H ? "H":"-")\(regs.flags.C ? "C":"-")][A: \(regs.A.hex) B: \(regs.B.hex)] - ", terminator: "")
-        if mem.PC == 0xc6cc {
-            debugLog("breakpoint entry")
-        }
         OPCODE = mem.getByte()
         switch OPCODE {
         case 0x00: nop()
@@ -123,6 +101,7 @@ class CPU {
         case 0x04: inc(&regs.B, "B")
         case 0x05: dec(&regs.B, "B")
         case 0x06: ld_imm(&regs.B, "B")
+        case 0x07: rla(rlca: true)
         case 0x08:
             let tar = mem.getHalfWord()
             ld_mem(addr: tar, val: UInt8(mem.SP & 0b1111_1111), "SP lo")
@@ -132,6 +111,7 @@ class CPU {
         case 0x0c: inc(&regs.C, "C")
         case 0x0d: dec(&regs.C, "C")
         case 0x0e: ld_imm(&regs.C, "C")
+        case 0x0f: rra(rrca: true)
         case 0x10:
             print("STOP instruction encountered")
             exit(1)
@@ -168,6 +148,7 @@ class CPU {
         case 0x2c: inc(&regs.L, "L")
         case 0x2d: dec(&regs.L, "L")
         case 0x2e: ld_imm(&regs.L, "L")
+        case 0x2f: cpl()
         case 0x30: jr(condition: !regs.flags.C, offset: mem.getSignedByte())
         case 0x31: ld_imm(&mem.SP, "SP")
         case 0x32:
@@ -175,11 +156,13 @@ class CPU {
             regs.HL -= 1
         case 0x35: dec(&mem.memory[Int(regs.HL)], "(HL)")
         case 0x36: ld_mem(addr: regs.HL, val: mem.getByte(), "(HL), u8")
+        case 0x37: cf(true)
         case 0x38: jr(condition: regs.flags.C, offset: mem.getSignedByte())
         case 0x39: add(mem.SP)
         case 0x3c: inc(&regs.A, "A")
         case 0x3d: dec(&regs.A, "A")
         case 0x3e: ld_imm(&regs.A, "A")
+        case 0x3f: cf(!regs.flags.C)
         case 0x40: ld_mem(&regs.B, val: regs.B)
         case 0x41: ld_mem(&regs.B, val: regs.C)
         case 0x42: ld_mem(&regs.B, val: regs.D)
@@ -243,13 +226,21 @@ class CPU {
         case 0x7d: ld_mem(&regs.A, val: regs.L)
         case 0x7e: ld_mem(&regs.A, val: mem.read(addr: regs.HL))
         case 0x7f: ld_mem(&regs.A, val: regs.A)
+        case 0x80: add(regs.B)
+        case 0x81: add(regs.C)
+        case 0x82: add(regs.D)
+        case 0x83: add(regs.E)
+        case 0x84: add(regs.H)
+        case 0x85: add(regs.L)
         case 0x86: add(mem.read(addr: regs.HL))
+        case 0x87: add(regs.A)
         case 0x88: adc(regs.B)
         case 0x89: adc(regs.C)
         case 0x8a: adc(regs.D)
         case 0x8b: adc(regs.E)
         case 0x8c: adc(regs.H)
         case 0x8d: adc(regs.L)
+        case 0x8e: adc(mem.read(addr: regs.HL))
         case 0x8f: adc(regs.A)
         case 0x90: sub(regs.B)
         case 0x91: sub(regs.C)
@@ -259,6 +250,22 @@ class CPU {
         case 0x95: sub(regs.L)
         case 0x96: sub(mem.read(addr: regs.HL))
         case 0x97: sub(regs.A)
+        case 0x98: sbc(regs.B)
+        case 0x99: sbc(regs.C)
+        case 0x9a: sbc(regs.D)
+        case 0x9b: sbc(regs.E)
+        case 0x9c: sbc(regs.H)
+        case 0x9d: sbc(regs.L)
+        case 0x9e: sbc(mem.read(addr: regs.HL))
+        case 0x9f: sbc(regs.A)
+        case 0xa0: and(regs.B)
+        case 0xa1: and(regs.C)
+        case 0xa2: and(regs.D)
+        case 0xa3: and(regs.E)
+        case 0xa4: and(regs.H)
+        case 0xa5: and(regs.L)
+        case 0xa6: and(mem.read(addr: regs.HL))
+        case 0xa7: and(regs.A)
         case 0xa8: xor(regs.B)
         case 0xa9: xor(regs.C)
         case 0xaa: xor(regs.D)
@@ -275,7 +282,14 @@ class CPU {
         case 0xb5: or(regs.L)
         case 0xb6: or(mem.read(addr: regs.HL))
         case 0xb7: or(regs.A)
-        case 0xbe: cp(regs.A, val: mem.read(addr: regs.HL), "(HL)[\(mem.read(addr: regs.HL).hex)]")
+        case 0xb8: cp(regs.B)
+        case 0xb9: cp(regs.C)
+        case 0xba: cp(regs.D)
+        case 0xbb: cp(regs.E)
+        case 0xbc: cp(regs.H)
+        case 0xbd: cp(regs.L)
+        case 0xbe: cp(mem.read(addr: regs.HL), "(HL)[\(mem.read(addr: regs.HL).hex)]")
+        case 0xbf: cp(regs.A)
         case 0xc0: ret(condition: !regs.flags.Z)
         case 0xc1:
             regs.C = mem.read(addr: mem.SP)
@@ -298,19 +312,7 @@ class CPU {
         case 0xcb:
             let CB = mem.getByte()
             let reg: UnsafeMutablePointer<UInt8> = {
-                switch (CB & 0b0111) {
-                case 0b0000: return .init(&regs.B)
-                case 0b0001: return .init(&regs.C)
-                case 0b0010: return .init(&regs.D)
-                case 0b0011: return .init(&regs.E)
-                case 0b0100: return .init(&regs.H)
-                case 0b0101: return .init(&regs.L)
-                case 0b0110: return .init(&mem.memory[Int(regs.HL)])
-                case 0b0111: return .init(&regs.A)
-                default:
-                    print("Fatal error while decoding CB instruction")
-                    exit(1)
-                }
+                [.init(&regs.B), .init(&regs.C), .init(&regs.D), .init(&regs.E), .init(&regs.H), .init(&regs.L), .init(&mem.memory[Int(regs.HL)]), .init(&regs.A)][Int(CB) & 0b0111]
             }()
             let CB_HI = (CB & 0b1111_1000)
             switch CB_HI {
@@ -339,6 +341,7 @@ class CPU {
         case 0xd9: ret(condition: true, enable_interrupts: true)
         case 0xda: jmp(condition: regs.flags.C, address: mem.getHalfWord())
         case 0xdc: call(condition: regs.flags.C)
+        case 0xde: sbc(mem.getByte())
         case 0xdf: rst(0x0018)
         case 0xe0: ld_mem(addr: 0xFF00 + UInt16(mem.getByte()), val: regs.A, "A")
         case 0xe1: pop(&regs.HL, "HL")
@@ -360,7 +363,7 @@ class CPU {
         case 0xf9: mem.SP = regs.HL
         case 0xfa: ld_mem(&regs.A, val: mem.read(addr: mem.getHalfWord()))
         case 0xfb: interrupts_enabled = true
-        case 0xfe: cp(regs.A, val: mem.getByte(), "A, u8")
+        case 0xfe: cp(mem.getByte(), "A, u8")
         case 0xff: rst(0x0038)
         default:
             print("Unsupported Opcode \(OPCODE.hex) at location \(mem.PC.hex)")
@@ -485,11 +488,11 @@ class CPU {
         debugLog("AND, (\(a)) - (Z: \(regs.flags.Z))")
     }
     
-    func cp(_ a: UInt8, val: UInt8, _ desc: String) {
-        regs.flags.Z = a == val
+    func cp(_ val: UInt8, _ desc: String = "") {
+        regs.flags.Z = regs.A == val
         regs.flags.N = true
-        regs.flags.H = (a & 0b1111) < (val & 0b1111)
-        regs.flags.C = a < val
+        regs.flags.H = regs.A.lowerNibble < val.lowerNibble
+        regs.flags.C = regs.A < val
         debugLog("CP \(desc)")
     }
     
@@ -533,9 +536,18 @@ class CPU {
         debugLog("SUB \(val)")
     }
     
+    func sbc(_ val: UInt8) {
+        regs.flags.N = true
+        let oldcarry = (val.u16 + regs.flags.C.int16) > regs.A
+        regs.flags.H = (val.lowerNibble + regs.flags.C.int8) > regs.A.lowerNibble
+        regs.A = regs.A &- (val &+ regs.flags.C.int8)
+        regs.flags.C = oldcarry
+        regs.flags.Z = regs.A == 0
+    }
+    
     func add(_ val: UInt8) {
-        regs.flags.C = (UInt16(val) + UInt16(regs.A)) > 0xff
-        regs.flags.H = (UInt16(val & 0xf) + UInt16(regs.A & 0xf)) > 0xf
+        regs.flags.C = (val.u16 + regs.A.u16) > 0xff
+        regs.flags.H = (val.lowerNibble.u16 + regs.A.lowerNibble.u16) > 0xf
         regs.A = regs.A &+ val
         regs.flags.Z = regs.A == 0
         regs.flags.N = false
@@ -544,20 +556,17 @@ class CPU {
     
     func add(_ val: UInt16) {
         regs.flags.N = false
-        
         regs.flags.H = (((val & 0xfff) + (regs.HL & 0xfff)) & 0x1000) > 0
         regs.flags.C = (val & regs.HL) > 0xffff
-        
         regs.HL = regs.HL &+ val
-        
         debugLog("ADD \(val)")
     }
     
     func adc(_ val: UInt8) {
         regs.flags.N = false;
-        regs.flags.H = ((UInt16(val & 0xf) + UInt16(regs.A & 0xf) + UInt16(regs.flags.C ? 1 : 0)) > 0xf)
-        let oldcarry = ((UInt16(val) + UInt16(regs.A) + UInt16(regs.flags.C ? 1 : 0)) > 0xff)
-        regs.A &+= val &+ UInt8(regs.flags.C ? 1 : 0)
+        regs.flags.H = (val.lowerNibble.u16 + regs.A.lowerNibble.u16 + regs.flags.C.int16) > 0xf
+        let oldcarry = (val.u16 + regs.A.u16 + regs.flags.C.int16) > 0xff
+        regs.A &+= val &+ regs.flags.C.int8
         regs.flags.C = oldcarry
         regs.flags.Z = regs.A == 0
         debugLog("ADC \(val)")
@@ -579,8 +588,8 @@ class CPU {
     }
     
     func rla(rlca: Bool = false) {
-        let oldcarry: UInt8 = regs.flags.C ? 1 : 0
-        regs.flags.C = (regs.A & 0b1000_000) > 0
+        let oldcarry: UInt8 = regs.flags.C.int8
+        regs.flags.C = (regs.A & 0b1000_0000) > 0
         regs.flags.Z = false
         regs.flags.N = false
         regs.flags.H = false
@@ -588,9 +597,21 @@ class CPU {
             regs.A = (regs.A << 1) | oldcarry
             debugLog("RLA")
         } else {
-            regs.A = (regs.A << 1) | (regs.flags.C ? 1 : 0)
+            regs.A = (regs.A << 1) | regs.flags.C.int8
             debugLog("RLCA")
         }
+    }
+    
+    func cpl() {
+        regs.A = ~regs.A
+        regs.flags.N = true
+        regs.flags.H = true
+    }
+    
+    func cf(_ a: Bool) {
+        regs.flags.H = false
+        regs.flags.N = false
+        regs.flags.C = a
     }
     
     //  CB
