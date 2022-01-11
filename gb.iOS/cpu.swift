@@ -432,13 +432,6 @@ class CPU {
         debugLog("LD \(desc), \(tar.hex)")
     }
     
-    //  non-CB
-    func rla() {
-        regs.flags.C = (regs.A & 0b1000_0000) > 0
-        regs.A <<= 1
-        debugLog("RLA")
-    }
-    
     func inc(_ a: inout UInt8, _ desc: String) {
         regs.flags.H = (a & 0b1111) == 0b1111
         a &+= 1
@@ -550,10 +543,13 @@ class CPU {
     }
     
     func add(_ val: UInt16) {
-        regs.flags.C = (val &+ regs.HL) > 0xff
-        regs.flags.H = ((val & 0xf) &+ (regs.HL & 0xf)) > 0xf
-        regs.HL = regs.HL &+ val
         regs.flags.N = false
+        
+        regs.flags.H = (((val & 0xfff) + (regs.HL & 0xfff)) & 0x1000) > 0
+        regs.flags.C = (val & regs.HL) > 0xffff
+        
+        regs.HL = regs.HL &+ val
+        
         debugLog("ADD \(val)")
     }
     
@@ -573,12 +569,27 @@ class CPU {
         regs.flags.Z = false
         regs.flags.N = false
         regs.flags.H = false
-        if rrca {
+        if !rrca {
             regs.A = (regs.A >> 1) | (oldcarry << 7)
-            debugLog("RRCA")
+            debugLog("RRA")
         } else {
             regs.A = (regs.A >> 1) | ((regs.flags.C ? 1 : 0) << 7)
-            debugLog("RRA")
+            debugLog("RRCA")
+        }
+    }
+    
+    func rla(rlca: Bool = false) {
+        let oldcarry: UInt8 = regs.flags.C ? 1 : 0
+        regs.flags.C = (regs.A & 0b1000_000) > 0
+        regs.flags.Z = false
+        regs.flags.N = false
+        regs.flags.H = false
+        if !rlca {
+            regs.A = (regs.A << 1) | oldcarry
+            debugLog("RLA")
+        } else {
+            regs.A = (regs.A << 1) | (regs.flags.C ? 1 : 0)
+            debugLog("RLCA")
         }
     }
     

@@ -24,6 +24,7 @@
 		3DADFB8C278CDE7200AD2C0C /* 04-op r,imm.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3DADFB8B278CDE7000AD2C0C /* 04-op r,imm.gb */; };
 		3DADFB8E278CE30800AD2C0C /* 05-op rp.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3DADFB8D278CE30400AD2C0C /* 05-op rp.gb */; };
 		3DADFB90278CE55500AD2C0C /* 08-misc instrs.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3DADFB8F278CE55200AD2C0C /* 08-misc instrs.gb */; };
+		3DADFB92278D015400AD2C0C /* instr_timing.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3DADFB91278D00B500AD2C0C /* instr_timing.gb */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 		3DADFB8B278CDE7000AD2C0C /* 04-op r,imm.gb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "04-op r,imm.gb"; sourceTree = "<group>"; };
 		3DADFB8D278CE30400AD2C0C /* 05-op rp.gb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "05-op rp.gb"; sourceTree = "<group>"; };
 		3DADFB8F278CE55200AD2C0C /* 08-misc instrs.gb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "08-misc instrs.gb"; sourceTree = "<group>"; };
+		3DADFB91278D00B500AD2C0C /* instr_timing.gb */ = {isa = PBXFileReference; lastKnownFileType = file; path = instr_timing.gb; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,6 +121,7 @@
 				3DA761F5278B7B950069182E /* 06-ld r,r.gb */,
 				3DADFB89278CBD1400AD2C0C /* 07-jr,jp,call,ret,rst.gb */,
 				3DADFB8F278CE55200AD2C0C /* 08-misc instrs.gb */,
+				3DADFB91278D00B500AD2C0C /* instr_timing.gb */,
 				3DA761F3278AF6F70069182E /* tetris.gb */,
 				3D8397062787A71700AA0A6F /* gb_iOSApp.swift */,
 				3D8397082787A71700AA0A6F /* ContentView.swift */,
@@ -266,6 +269,7 @@
 				3DA761F6278B7BB80069182E /* 06-ld r,r.gb in Resources */,
 				3DADFB8A278CBD1600AD2C0C /* 07-jr,jp,call,ret,rst.gb in Resources */,
 				3DADFB90278CE55500AD2C0C /* 08-misc instrs.gb in Resources */,
+				3DADFB92278D015400AD2C0C /* instr_timing.gb in Resources */,
 				3DADFB8E278CE30800AD2C0C /* 05-op rp.gb in Resources */,
 				3DADFB8C278CDE7200AD2C0C /* 04-op r,imm.gb in Resources */,
 				3DA761F4278B5CB90069182E /* tetris.gb in Resources */,
