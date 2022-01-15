@@ -113,8 +113,9 @@ class MEMORY {
         
         EMULATOR.debugLog("loading ROM...", level: .ERROR)
 //        let rom = loadRom(forResource: "tetris", withExtension: "gb") ?? []
-//        let rom = loadRom(forResource: "instr_timing", withExtension: "gb") ?? []
-        let rom = loadRom(forResource: "02-interrupts", withExtension: "gb") ?? []                  //
+        let rom = loadRom(forResource: "instr_timing", withExtension: "gb") ?? []
+//        let rom = loadRom(forResource: "01-special", withExtension: "gb") ?? []                   //  PASSED
+//        let rom = loadRom(forResource: "02-interrupts", withExtension: "gb") ?? []                //  PASSED
 //        let rom = loadRom(forResource: "03-op sp,hl", withExtension: "gb") ?? []                  //  PASSED
 //        let rom = loadRom(forResource: "04-op r,imm", withExtension: "gb") ?? []                  //  PASSED
 //        let rom = loadRom(forResource: "05-op rp", withExtension: "gb") ?? []                     //  PASSED
