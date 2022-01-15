@@ -65,3 +65,9 @@ extension String {
     }
 }
 
+extension Notification.Name {
+    static var consoleOutput: Notification.Name {
+        return .init(rawValue: "Emulator.ConsoleOutput")
+    }
+}
+

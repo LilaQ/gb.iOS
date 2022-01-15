@@ -10,12 +10,15 @@ import SwiftUI
 struct ContentView: View {
     
     let emulator: EMULATOR = EMULATOR()
+    @ObservedObject var model: UIModel = UIModel()
     
     var body: some View {
-        Text("Hello, world!")
+        Text(model.output)
             .padding()
             .onAppear {
-                print("FUCK ARSE")
+                DispatchQueue.global().async {
+                    emulator.iter()
+                }
             }
     }
 }

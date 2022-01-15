@@ -18,7 +18,7 @@ import SwiftUI
 class MEMORY {
     
     var BOOTROM : [UInt8] = {
-        print("Initializing BOOTROM..")
+        EMULATOR.debugLog("Initializing BOOTROM..", level: .ERROR)
         let ROM = "31feffaf21ff9f32cb7c20fb2126ff0e113e8032e20c3ef3e2323e77773efce0471104012110801acd9500cd9600137bfe3420f311d80006081a1322230520f93e19ea1099212f990e0c3d2808320d20f92e0f18f3673e6457e0423e91e040041e020e0cf044fe9020fa0d20f71d20f20e13247c1e83fe6228061ec1fe6420067be20c3e87e2f04290e0421520d205204f162018cb4f0604c5cb1117c1cb11170520f522232223c9ceed6666cc0d000b03730083000c000d0008111f8889000edccc6ee6ddddd999bbbb67636e0eecccdddc999fbbb9333e3c42b9a5b9a5423c21040111a8001a13be20fe237dfe3420f506197886230520fb8620fe3e01e050"
         var arr = [UInt8](repeating: 0, count: 256)
         for i in 0..<256 {
@@ -28,7 +28,8 @@ class MEMORY {
     }()
 
     public var memory: [UInt8] = [UInt8](repeating: 0, count: 0x10000)
-    private var BOOTROM_ENABLED = true
+    private var BOOTROM_ENABLED: Bool = true
+    private var cycles_procssed: Int = 0
     public var PC : UInt16 = 0x0000
     public var SP : UInt16 = 0x0000
 
@@ -53,10 +54,10 @@ class MEMORY {
     func write(addr: UInt16, val: UInt8) {
         switch addr {
         case 0xFF02:    //  serial output; Blarggs tests console output
-            print(Character(UnicodeScalar(memory[0xFF01])), terminator: "")
+            EMULATOR.debugLog("\(Character(UnicodeScalar(memory[0xFF01])))", terminator: "", level: .ERROR)
             memory[0xFF02] = 0
         case 0xFF50:    //  write to disable Bootrom
-            print("Disabling BOOTROM")
+            EMULATOR.debugLog("Disabling BOOTROM", level: .ERROR)
             BOOTROM_ENABLED = false
         default:
             memory[Int(addr)] = val
@@ -95,13 +96,19 @@ class MEMORY {
         write(addr: SP, val: a.loByte)
     }
     
+    func cyclesRan()->Int {
+        let r = cycles_procssed
+        cycles_procssed = 0
+        return r
+    }
+    
     init() {
-        print("MEMORY init")
+        EMULATOR.debugLog("MEMORY init", level: .ERROR)
         
-        print("DEBUG: Fixed value of 0x90 to 0xFF44 for expected VBLANK")
+        EMULATOR.debugLog("DEBUG: Fixed value of 0x90 to 0xFF44 for expected VBLANK", level: .ERROR)
         memory[0xff44]=0x90
         
-        print("loading ROM...")
+        EMULATOR.debugLog("loading ROM...", level: .ERROR)
 //        let rom = loadRom(forResource: "tetris", withExtension: "gb") ?? []
 //        let rom = loadRom(forResource: "instr_timing", withExtension: "gb") ?? []
         let rom = loadRom(forResource: "02-interrupts", withExtension: "gb") ?? []                  //
@@ -132,12 +139,12 @@ class MEMORY {
             let rawData: Data = try Data(contentsOf: fileUrl)
             
             let u8res: [UInt8] = [UInt8](rawData)
-            print("Title    : ", terminator: "")
+            EMULATOR.debugLog("Title    : ", terminator: "", level: .ERROR)
             for i in 0x134..<0x144 {
-                print(Character(UnicodeScalar(u8res[i])), terminator: "")
+                EMULATOR.debugLog("\(Character(UnicodeScalar(u8res[i])))", terminator: "", level: .ERROR)
             }
-            print()
-            print("Cartridge: ", terminator: "")
+            EMULATOR.debugLog("", level: .ERROR)
+            EMULATOR.debugLog("Cartridge: ", terminator: "", level: .ERROR)
             var c = ""
             switch u8res[0x147] {
             case 0x00: c = "ROM ONLY"
@@ -148,8 +155,8 @@ class MEMORY {
             case 0x06: c = "MBC2+BATTERY"
             default: c = "UNCLASSIFIED"
             }
-            print(c)
-            print("ROM Size : ", terminator: "")
+            EMULATOR.debugLog(c, level: .ERROR)
+            EMULATOR.debugLog("ROM Size : ", terminator: "", level: .ERROR)
             c = ""
             switch u8res[0x148] {
             case 0x00: c = "32 KB (no banking)"
@@ -157,8 +164,8 @@ class MEMORY {
             case 0x02: c = "128 KB (8 banks)"
             default: c = "UNCLASSIFIED"
             }
-            print(c)
-            print("RAM Size : ", terminator: "")
+            EMULATOR.debugLog(c, level: .ERROR)
+            EMULATOR.debugLog("RAM Size : ", terminator: "", level: .ERROR)
             c = ""
             switch u8res[0x148] {
             case 0x00: c = "None"
@@ -166,13 +173,13 @@ class MEMORY {
             case 0x02: c = "8 KB"
             default: c = "UNCLASSIFIED"
             }
-            print(c)
+            EMULATOR.debugLog(c, level: .ERROR)
 
             // Return the raw data as an array of bytes.
             return u8res
         } catch {
-            // Couldn't read the file.
-            return nil
+            print("Error reading ROM, exiting...")
+            exit(1)
         }
     }
 }

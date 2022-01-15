@@ -5,6 +5,8 @@
 //  Created by Jan on 06.01.22.
 //
 
+import SwiftUI
+
 //      GAMEBOY
 //  Main RAM: 8K Byte
 //  Video RAM: 8K Byte
@@ -18,20 +20,32 @@ class EMULATOR {
     let mem : MEMORY
     let cpu : CPU
     
+    var div_clocksum : Int = 0
+    var timer_clocksum : Int = 0
+    
+    enum DEBUG_LEVEL {
+        case ALL, ERROR
+    }
+    private static var output: String = "" {
+        didSet {
+            NotificationCenter.default.post(name: .consoleOutput, object: self.output)
+        }
+    }
+    private static var DEBUG : DEBUG_LEVEL = .ERROR
+    
     init() {
-        print("gb.iOS starting up...")
+        EMULATOR.debugLog("gb.iOS starting up...", level: .ERROR)
         mem = MEMORY()
         cpu = CPU(mem: mem)
-        iter()
     }
 
     func iter() {
         
         while(true) {
             cpu.step()
+            handleTimer(mem.cyclesRan())
             handleInterrupts()
         }
-        
     }
     
     func handleInterrupts() {
@@ -77,8 +91,62 @@ class EMULATOR {
         }
     }
     
-    func handleTimer() {
+    func handleTimer(_ cycle: Int) {
         
+        //  set divider
+        div_clocksum += cycle
+        if div_clocksum >= 256 {
+            div_clocksum -= 256
+            mem.write(addr: 0xFF04, val: mem.read(addr: 0xFF04) &+ 1)
+        }
+        
+        //  check if timer is on
+        if (mem.read(addr: 0xFF07) & 0b10) > 0 {
+            
+            //  increase helper counter
+            timer_clocksum += cycle * 4
+            
+            //  set frequency
+            var freq = 4096
+            switch mem.read(addr: 0xFF07) & 0b11 {
+            case 1: freq = 262144
+            case 2: freq = 65536
+            case 3: freq = 16384
+            default: freq = 4096
+            }
+            
+            //  increment timer according to frequency
+            while timer_clocksum >= (4194304 / freq) {
+                
+                //  increase TIMA
+                mem.write(addr: 0xFF05, val: mem.read(addr: 0xFF05) &+ 1)
+                
+                //  check TIMA for overflow
+                if mem.read(addr: 0xFF05) == 0x00 {
+                    
+                    //  set timer interrupt req
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) | 0b100)
+                    
+                    //  reset timer to timer modulo
+                    mem.write(addr: 0xFF05, val: mem.read(addr: 0xFF06))
+                    
+                    timer_clocksum -= (4194304 / freq)
+                }
+            }
+        }
+    }
+    
+    static func debugLog(_ msg: String, terminator: String = "\n", level: DEBUG_LEVEL = .ALL) {
+        switch level {
+        case .ALL:
+            if DEBUG == .ALL {
+                output += msg + terminator
+            }
+        case .ERROR:
+            if DEBUG == .ERROR {
+                output += msg + terminator
+            }
+        }
     }
     
 }

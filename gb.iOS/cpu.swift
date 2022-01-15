@@ -1,5 +1,6 @@
 import Darwin
 import CoreFoundation
+import SwiftUI
 
 //      GAMEBOY
 //  Main RAM: 8K Byte
@@ -70,21 +71,21 @@ class FLAGS {
 }
 
 class CPU {
-
+    
     private var OPCODE : UInt8 = 0x00
     private var mem : MEMORY
     public var regs : REGS
     public var interrupts_enabled : Bool = false
     
     init(mem: MEMORY) {
-        debugLog("setting up CPU")
         self.mem = mem
         self.regs = REGS()
+        EMULATOR.debugLog("setting up CPU", level: .ERROR)
     }
 
     func step() {
         //  check OPCODE
-        debugLog("\(mem.PC.hex) [SP: \(mem.SP.hex)][HL: \(regs.HL.hex)][\(regs.flags.Z ? "Z":"-")\(regs.flags.N ? "N":"-")\(regs.flags.H ? "H":"-")\(regs.flags.C ? "C":"-")][A: \(regs.A.hex) B: \(regs.B.hex)] - ", terminator: "")
+        EMULATOR.debugLog("\(mem.PC.hex) [SP: \(mem.SP.hex)][HL: \(regs.HL.hex)][\(regs.flags.Z ? "Z":"-")\(regs.flags.N ? "N":"-")\(regs.flags.H ? "H":"-")\(regs.flags.C ? "C":"-")][A: \(regs.A.hex) B: \(regs.B.hex)] - ", terminator: "")
         OPCODE = mem.getByte()
         let r: UnsafeMutablePointer<UInt8> = {
             [.init(&regs.B), .init(&regs.C), .init(&regs.D), .init(&regs.E), .init(&regs.H), .init(&regs.L), .init(&mem.memory[Int(regs.HL)]), .init(&regs.A)][Int(OPCODE) & 0b0111]
@@ -221,8 +222,8 @@ class CPU {
             case 0x80...0xbf: res(&reg.pointee, (CB_HI>>3)&0b111)
             case 0xc0...0xff: set(&reg.pointee, (CB_HI>>3)&0b111)
             default:
-                print("Unsupported CB Opcode \(CB.hex) at location \(mem.PC.hex)")
-                print("Follow up bytes: \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) ")
+                EMULATOR.debugLog("Unsupported CB Opcode \(CB.hex) at location \(mem.PC.hex)", level: .ERROR)
+                EMULATOR.debugLog("Follow up bytes: \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) ", level: .ERROR)
                 exit(1)
             }
         case 0xcc: call(condition: regs.flags.Z)
@@ -267,8 +268,8 @@ class CPU {
         case 0xfe: cp(mem.getByte(), "A, u8")
         case 0xff: rst(0x0038)
         default:
-            print("Unsupported Opcode \(OPCODE.hex) at location \(mem.PC.hex)")
-            print("Follow up bytes: \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) ")
+            EMULATOR.debugLog("Unsupported Opcode \(OPCODE.hex) at location \(mem.PC.hex)", level: .ERROR)
+            EMULATOR.debugLog("Follow up bytes: \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) ", level: .ERROR)
             exit(1)
         }
     }
@@ -276,7 +277,7 @@ class CPU {
     func rst(_ a: UInt16) {
         push(mem.PC, "PC")
         mem.PC = a
-        debugLog("RST \(a.hex)")
+        EMULATOR.debugLog("RST \(a.hex)")
     }
     
     func ret(condition: Bool, enable_interrupts: Bool = false) {
@@ -290,11 +291,11 @@ class CPU {
                 interrupts_enabled = true
             }
         }
-        debugLog("RET \(mem.PC.hex)")
+        EMULATOR.debugLog("RET \(mem.PC.hex)")
     }
     
     func nop() {
-        debugLog("NOP")
+        EMULATOR.debugLog("NOP")
     }
     
     func call(condition: Bool) {
@@ -306,23 +307,23 @@ class CPU {
             mem.write(addr: mem.SP, val: mem.PC.loByte)
             mem.PC = tar
         }
-        debugLog("CALL u16, (\(mem.PC.hex))")
+        EMULATOR.debugLog("CALL u16, (\(mem.PC.hex))")
     }
     
     func ld_mem(_ tar: inout UInt8, val: UInt8, desc: String = "") {
         tar = val
-        debugLog("LD \(desc)")
+        EMULATOR.debugLog("LD \(desc)")
     }
     
     func ld_mem(addr: UInt16, val: UInt8) {
         mem.write(addr: addr, val: val)
-        debugLog("LD (\(addr.hex)), (\(val))")
+        EMULATOR.debugLog("LD (\(addr.hex)), (\(val))")
     }
     
     //  ld immediate - BYTE
     func ld_imm(_ tar: inout UInt8, _ desc: String) {
         tar = mem.getByte()
-        debugLog("LD \(desc), \(tar.hex)")
+        EMULATOR.debugLog("LD \(desc), \(tar.hex)")
     }
     
     //  ld immediate - WORD
@@ -330,7 +331,7 @@ class CPU {
         let lo = mem.getByte()
         let hi = mem.getByte()
         tar = UInt16(hi) * 0x100 &+ UInt16(lo)
-        debugLog("LD \(desc), \(tar.hex)")
+        EMULATOR.debugLog("LD \(desc), \(tar.hex)")
     }
     
     func inc(_ a: inout UInt8, _ desc: String) {
@@ -338,12 +339,12 @@ class CPU {
         a &+= 1
         regs.flags.N = false
         regs.flags.Z = a == 0
-        debugLog("INC \(desc)")
+        EMULATOR.debugLog("INC \(desc)")
     }
     
     func inc(_ a: inout UInt16, _ desc: String) {
         a &+= 1
-        debugLog("INC \(desc)")
+        EMULATOR.debugLog("INC \(desc)")
     }
     
     func dec(_ a: inout UInt8, _ desc: String) {
@@ -351,12 +352,12 @@ class CPU {
         a &-= 1
         regs.flags.N = true
         regs.flags.Z = a == 0
-        debugLog("DEC \(desc)")
+        EMULATOR.debugLog("DEC \(desc)")
     }
     
     func dec(_ a: inout UInt16, _ desc: String) {
         a &-= 1
-        debugLog("DEC \(desc)")
+        EMULATOR.debugLog("DEC \(desc)")
     }
     
     func xor(_ a: UInt8) {
@@ -365,7 +366,7 @@ class CPU {
         regs.flags.N = false
         regs.flags.H = false
         regs.flags.C = false
-        debugLog("XOR, (\(a)) - (Z: \(regs.flags.Z))")
+        EMULATOR.debugLog("XOR, (\(a)) - (Z: \(regs.flags.Z))")
     }
     
     func or(_ a: UInt8) {
@@ -374,7 +375,7 @@ class CPU {
         regs.flags.N = false
         regs.flags.H = false
         regs.flags.C = false
-        debugLog("OR, (\(a)) - (Z: \(regs.flags.Z))")
+        EMULATOR.debugLog("OR, (\(a)) - (Z: \(regs.flags.Z))")
     }
     
     func and(_ a: UInt8) {
@@ -383,7 +384,7 @@ class CPU {
         regs.flags.N = false
         regs.flags.H = true
         regs.flags.C = false
-        debugLog("AND, (\(a)) - (Z: \(regs.flags.Z))")
+        EMULATOR.debugLog("AND, (\(a)) - (Z: \(regs.flags.Z))")
     }
     
     func cp(_ val: UInt8, _ desc: String = "") {
@@ -391,7 +392,7 @@ class CPU {
         regs.flags.N = true
         regs.flags.H = regs.A.lowerNibble < val.lowerNibble
         regs.flags.C = regs.A < val
-        debugLog("CP \(desc)")
+        EMULATOR.debugLog("CP \(desc)")
     }
     
     func push(_ w: UInt16, _ desc: String) {
@@ -399,7 +400,7 @@ class CPU {
         mem.write(addr: mem.SP, val: w.hiByte)
         mem.SP -= 1
         mem.write(addr: mem.SP, val: w.loByte)
-        debugLog("PUSH \(desc)")
+        EMULATOR.debugLog("PUSH \(desc)")
     }
     
     func pop(_ w: inout UInt16, _ desc: String) {
@@ -408,21 +409,21 @@ class CPU {
         let hi = mem.read(addr: mem.SP)
         mem.SP += 1
         w = (UInt16(hi) << 8) | UInt16(lo)
-        debugLog("POP \(desc)")
+        EMULATOR.debugLog("POP \(desc)")
     }
     
     func jmp(condition: Bool, address: UInt16) {
         if condition {
             mem.PC = address
         }
-        debugLog("JMP")
+        EMULATOR.debugLog("JMP")
     }
     
     func jr(condition: Bool, offset: Int8) {
         if condition {
             mem.PC = UInt16(Int(mem.PC) + Int(offset))
         }
-        debugLog("JR, (\(offset))")
+        EMULATOR.debugLog("JR, (\(offset))")
     }
     
     func sub(_ val: UInt8) {
@@ -431,7 +432,7 @@ class CPU {
         regs.A = regs.A &- val
         regs.flags.Z = regs.A == 0
         regs.flags.N = true
-        debugLog("SUB \(val)")
+        EMULATOR.debugLog("SUB \(val)")
     }
     
     func sbc(_ val: UInt8) {
@@ -449,7 +450,7 @@ class CPU {
         regs.A = regs.A &+ val
         regs.flags.Z = regs.A == 0
         regs.flags.N = false
-        debugLog("ADD \(val)")
+        EMULATOR.debugLog("ADD \(val)")
     }
     
     func add(_ val: UInt16) {
@@ -457,7 +458,7 @@ class CPU {
         regs.flags.H = (((val & 0xfff) + (regs.HL & 0xfff)) & 0x1000) > 0
         regs.flags.C = (UInt(val) + UInt(regs.HL)) > 0xffff
         regs.HL = regs.HL &+ val
-        debugLog("ADD \(val)")
+        EMULATOR.debugLog("ADD \(val)")
     }
     
     func add_sp() {           //  calc Flags on UNSIGNED byte, store to SP with SIGNED byte!
@@ -467,7 +468,7 @@ class CPU {
         regs.flags.H = ((mem.SP & 0xf) + (val.u16 & 0xf)) > 0xf
         regs.flags.C = ((mem.SP & 0xff) + (val.u16 & 0xff)) > 0xff
         mem.SP = UInt16(truncatingIfNeeded: Int(mem.SP) &+ Int(Int8(bitPattern: val)))
-        debugLog("ADD_SP \(val)")
+        EMULATOR.debugLog("ADD_SP \(val)")
     }
     
     func ld_hl_sp_i() {       //  calc Flags on UNSIGNED byte, store to HL with SIGNED byte!
@@ -477,7 +478,7 @@ class CPU {
         regs.HL = UInt16(truncatingIfNeeded: Int(mem.SP) &+ Int(Int8(bitPattern: val)))
         regs.flags.N = false
         regs.flags.Z = false
-        debugLog("LD HL, SP+i")
+        EMULATOR.debugLog("LD HL, SP+i")
     }
     
     func adc(_ val: UInt8) {
@@ -487,7 +488,7 @@ class CPU {
         regs.A &+= val &+ regs.flags.C.int8
         regs.flags.C = oldcarry
         regs.flags.Z = regs.A == 0
-        debugLog("ADC \(val)")
+        EMULATOR.debugLog("ADC \(val)")
     }
     
     func rra(rrca: Bool = false) {
@@ -498,10 +499,10 @@ class CPU {
         regs.flags.H = false
         if !rrca {
             regs.A = (regs.A >> 1) | (oldcarry << 7)
-            debugLog("RRA")
+            EMULATOR.debugLog("RRA")
         } else {
             regs.A = (regs.A >> 1) | (regs.flags.C.int8 << 7)
-            debugLog("RRCA")
+            EMULATOR.debugLog("RRCA")
         }
     }
     
@@ -513,10 +514,10 @@ class CPU {
         regs.flags.H = false
         if !rlca {
             regs.A = (regs.A << 1) | oldcarry
-            debugLog("RLA")
+            EMULATOR.debugLog("RLA")
         } else {
             regs.A = (regs.A << 1) | regs.flags.C.int8
-            debugLog("RLCA")
+            EMULATOR.debugLog("RLCA")
         }
     }
     
@@ -561,24 +562,24 @@ class CPU {
         regs.flags.H = false
         a = a >> 1
         regs.flags.Z = a == 0
-        debugLog("SRL")
+        EMULATOR.debugLog("SRL")
     }
     
     func bit(_ a: inout UInt8, _ bit: UInt8) {
         regs.flags.Z = (a & (1<<bit)) == 0
         regs.flags.N = false
         regs.flags.H = true
-        debugLog("BIT \(bit)")
+        EMULATOR.debugLog("BIT \(bit)")
     }
     
     func res(_ a: inout UInt8, _ bit: UInt8) {
         a = a & ~(1<<bit)
-        debugLog("RES \(bit)")
+        EMULATOR.debugLog("RES \(bit)")
     }
     
     func set(_ a: inout UInt8, _ bit: UInt8) {
         a = a | (1<<bit)
-        debugLog("SET \(bit)")
+        EMULATOR.debugLog("SET \(bit)")
     }
     
     func rl(_ a: inout UInt8, carry_any: Bool = true, keep_carry: Bool = false) {
@@ -596,7 +597,7 @@ class CPU {
             a = (a << 1)
         }
         regs.flags.Z = a == 0
-        debugLog("RL")
+        EMULATOR.debugLog("RL")
     }
     
     func rr(_ a: inout UInt8, carry_any: Bool = true, keep_carry: Bool = false) {
@@ -615,7 +616,7 @@ class CPU {
             a = (a >> 1) | (msb << 7)
         }
         regs.flags.Z = a == 0;
-        debugLog("RR")
+        EMULATOR.debugLog("RR")
     }
     
     func swap(_ a: inout UInt8) {
@@ -625,8 +626,5 @@ class CPU {
         a = (a >> 4) | ((a & 0b1111) << 4)
         regs.flags.Z = a == 0
     }
-}
-
-func debugLog(_ msg: String, terminator: String = "\n") {
-//    print(msg, terminator: terminator)
+    
 }
