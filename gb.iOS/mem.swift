@@ -29,7 +29,7 @@ class MEMORY {
 
     public var memory: [UInt8] = [UInt8](repeating: 0, count: 0x10000)
     private var BOOTROM_ENABLED: Bool = true
-    private var cycles_procssed: Int = 0
+    public var cycles_procssed: Int = 0
     public var PC : UInt16 = 0x0000
     public var SP : UInt16 = 0x0000
 
@@ -39,6 +39,9 @@ class MEMORY {
         
         //  increasing PC by 1 on getByte
         self.PC += 1
+        
+        //  count cycles, for timers
+        cycles_procssed += 1
         
         //  ... else return just byte at mem
         return read(addr: addr)

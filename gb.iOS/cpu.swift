@@ -174,7 +174,9 @@ class CPU {
         case 0x58...0x5f: ld_mem(&regs.E, val: r.pointee)
         case 0x60...0x67: ld_mem(&regs.H, val: r.pointee)
         case 0x68...0x6f: ld_mem(&regs.L, val: r.pointee)
-        case 0x70...0x77: ld_mem(addr: regs.HL, val: r.pointee)
+        case 0x70...0x75: ld_mem(addr: regs.HL, val: r.pointee)
+        case 0x76: regs.flags.HALT = true
+        case 0x77: ld_mem(addr: regs.HL, val: r.pointee)
         case 0x78...0x7f: ld_mem(&regs.A, val: r.pointee)
         case 0x80...0x87: add(r.pointee)
         case 0x88...0x8f: adc(r.pointee)

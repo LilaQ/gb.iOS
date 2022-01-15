@@ -42,7 +42,11 @@ class EMULATOR {
     func iter() {
         
         while(true) {
-            cpu.step()
+            if !cpu.regs.flags.HALT {
+                cpu.step()
+            } else {
+                mem.cycles_procssed += 1
+            }
             handleTimer(mem.cyclesRan())
             handleInterrupts()
         }
@@ -66,24 +70,24 @@ class EMULATOR {
                 //  Interrupts handled by priority
                 
                 //  VBlank
-                if (interruptMask & 0b001) > 0 {
+                if (interruptMask & INTERRUPT_MASK.VBLANK) > 0 {
                     mem.pushToStack(mem.PC)
                     mem.PC = 0x40
-                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1110)
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & ~INTERRUPT_MASK.VBLANK)
                 }
                 
                 //  LCD Stat
-                if (interruptMask & 0b010) > 0 {
+                if (interruptMask & INTERRUPT_MASK.LCD_STAT) > 0 {
                     mem.pushToStack(mem.PC)
                     mem.PC = 0x48
-                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1101)
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & ~INTERRUPT_MASK.LCD_STAT)
                 }
                 
                 //  Timer
-                if (interruptMask & 0b100) > 0 {
+                if (interruptMask & INTERRUPT_MASK.TIMER) > 0 {
                     mem.pushToStack(mem.PC)
                     mem.PC = 0x50
-                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1011)
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & ~INTERRUPT_MASK.TIMER)
                 }
                 
                 cpu.interrupts_enabled = false
@@ -101,7 +105,7 @@ class EMULATOR {
         }
         
         //  check if timer is on
-        if (mem.read(addr: 0xFF07) & 0b10) > 0 {
+        if (mem.read(addr: 0xFF07) & 0b100) > 0 {
             
             //  increase helper counter
             timer_clocksum += cycle * 4
@@ -125,15 +129,22 @@ class EMULATOR {
                 if mem.read(addr: 0xFF05) == 0x00 {
                     
                     //  set timer interrupt req
-                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) | 0b100)
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) | INTERRUPT_MASK.TIMER)
                     
                     //  reset timer to timer modulo
                     mem.write(addr: 0xFF05, val: mem.read(addr: 0xFF06))
                     
-                    timer_clocksum -= (4194304 / freq)
                 }
+                
+                timer_clocksum -= (4194304 / freq)
             }
         }
+    }
+    
+    enum INTERRUPT_MASK {
+        static let VBLANK: UInt8     = 0b0000_0001
+        static let LCD_STAT: UInt8   = 0b0000_0010
+        static let TIMER: UInt8      = 0b0000_0100
     }
     
     static func debugLog(_ msg: String, terminator: String = "\n", level: DEBUG_LEVEL = .ALL) {
