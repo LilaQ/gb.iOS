@@ -1,10 +1,3 @@
-//
-//  cpu.swift
-//  gb.iOS
-//
-//  Created by Jan on 06.01.22.
-//
-
 import Darwin
 import CoreFoundation
 
@@ -80,7 +73,7 @@ class CPU {
 
     private var OPCODE : UInt8 = 0x00
     private var mem : MEMORY
-    private var regs : REGS
+    public var regs : REGS
     public var interrupts_enabled : Bool = false
     
     init(mem: MEMORY) {
@@ -93,20 +86,24 @@ class CPU {
         //  check OPCODE
         debugLog("\(mem.PC.hex) [SP: \(mem.SP.hex)][HL: \(regs.HL.hex)][\(regs.flags.Z ? "Z":"-")\(regs.flags.N ? "N":"-")\(regs.flags.H ? "H":"-")\(regs.flags.C ? "C":"-")][A: \(regs.A.hex) B: \(regs.B.hex)] - ", terminator: "")
         OPCODE = mem.getByte()
+        let r: UnsafeMutablePointer<UInt8> = {
+            [.init(&regs.B), .init(&regs.C), .init(&regs.D), .init(&regs.E), .init(&regs.H), .init(&regs.L), .init(&mem.memory[Int(regs.HL)]), .init(&regs.A)][Int(OPCODE) & 0b0111]
+        }()
         switch OPCODE {
         case 0x00: nop()
         case 0x01: ld_imm(&regs.BC, "BC")
-        case 0x02: ld_mem(addr: regs.BC, val: regs.A, "(BC), A")
+        case 0x02: ld_mem(addr: regs.BC, val: regs.A)
         case 0x03: inc(&regs.BC, "BC")
-        case 0x04: inc(&regs.B, "B")
+        case 0x04: inc(&regs.B, "")
         case 0x05: dec(&regs.B, "B")
         case 0x06: ld_imm(&regs.B, "B")
         case 0x07: rla(rlca: true)
         case 0x08:
             let tar = mem.getHalfWord()
-            ld_mem(addr: tar, val: UInt8(mem.SP & 0b1111_1111), "SP lo")
-            ld_mem(addr: tar + 1, val: UInt8(mem.SP >> 8), "SP hi")
+            ld_mem(addr: tar, val: UInt8(mem.SP & 0b1111_1111))
+            ld_mem(addr: tar + 1, val: UInt8(mem.SP >> 8))
         case 0x09: add(regs.BC)
+        case 0x0a: ld_mem(&regs.A, val: mem.read(addr: regs.BC))
         case 0x0b: dec(&regs.BC, "BC")
         case 0x0c: inc(&regs.C, "C")
         case 0x0d: dec(&regs.C, "C")
@@ -116,7 +113,7 @@ class CPU {
             print("STOP instruction encountered")
             exit(1)
         case 0x11: ld_imm(&regs.DE, "DE")
-        case 0x12: ld_mem(addr: regs.DE, val: regs.A, "(DE), A")
+        case 0x12: ld_mem(addr: regs.DE, val: regs.A)
         case 0x13: inc(&regs.DE, "DE")
         case 0x14: inc(&regs.D, "D")
         case 0x15: dec(&regs.D, "D")
@@ -124,7 +121,7 @@ class CPU {
         case 0x17: rla()
         case 0x18: jr(condition: true, offset: mem.getSignedByte())
         case 0x19: add(regs.DE)
-        case 0x1a: ld_mem(&regs.A, val: mem.read(addr: regs.DE), desc: " A, (DE) - (\(regs.DE.hex))[\(mem.read(addr: regs.DE).hex)]")
+        case 0x1a: ld_mem(&regs.A, val: mem.read(addr: regs.DE))
         case 0x1b: dec(&regs.DE, "DE")
         case 0x1c: inc(&regs.E, "E")
         case 0x1d: dec(&regs.E, "E")
@@ -133,16 +130,17 @@ class CPU {
         case 0x20: jr(condition: !regs.flags.Z, offset: mem.getSignedByte())
         case 0x21: ld_imm(&regs.HL, "HL")
         case 0x22:
-            ld_mem(addr: regs.HL, val: regs.A, "A")
+            ld_mem(addr: regs.HL, val: regs.A)
             regs.HL += 1
         case 0x23: inc(&regs.HL, "HL")
         case 0x24: inc(&regs.H, "H")
         case 0x25: dec(&regs.H, "H")
         case 0x26: ld_imm(&regs.H, "H")
+        case 0x27: daa()
         case 0x28: jr(condition: regs.flags.Z, offset: mem.getSignedByte())
         case 0x29: add(regs.HL)
         case 0x2a:
-            ld_mem(&regs.A, val: mem.read(addr: regs.HL), desc: " A, (HL+) - (\(regs.HL.hex))[\(mem.read(addr: regs.HL).hex)]")
+            ld_mem(&regs.A, val: mem.read(addr: regs.HL))
             regs.HL += 1
         case 0x2b: dec(&regs.HL, "HL")
         case 0x2c: inc(&regs.L, "L")
@@ -152,144 +150,39 @@ class CPU {
         case 0x30: jr(condition: !regs.flags.C, offset: mem.getSignedByte())
         case 0x31: ld_imm(&mem.SP, "SP")
         case 0x32:
-            ld_mem(addr: regs.HL, val: regs.A, "A")
+            ld_mem(addr: regs.HL, val: regs.A)
             regs.HL -= 1
+        case 0x33: inc(&mem.SP, "SP")
+        case 0x34: inc(&mem.memory[Int(regs.HL)], "(HL)")
         case 0x35: dec(&mem.memory[Int(regs.HL)], "(HL)")
-        case 0x36: ld_mem(addr: regs.HL, val: mem.getByte(), "(HL), u8")
+        case 0x36: ld_mem(addr: regs.HL, val: mem.getByte())
         case 0x37: cf(true)
         case 0x38: jr(condition: regs.flags.C, offset: mem.getSignedByte())
         case 0x39: add(mem.SP)
+        case 0x3a:
+            ld_mem(&regs.A, val: mem.read(addr: regs.HL))
+            regs.HL -= 1
+        case 0x3b: dec(&mem.SP, "SP")
         case 0x3c: inc(&regs.A, "A")
         case 0x3d: dec(&regs.A, "A")
         case 0x3e: ld_imm(&regs.A, "A")
         case 0x3f: cf(!regs.flags.C)
-        case 0x40: ld_mem(&regs.B, val: regs.B)
-        case 0x41: ld_mem(&regs.B, val: regs.C)
-        case 0x42: ld_mem(&regs.B, val: regs.D)
-        case 0x43: ld_mem(&regs.B, val: regs.E)
-        case 0x44: ld_mem(&regs.B, val: regs.H)
-        case 0x45: ld_mem(&regs.B, val: regs.L)
-        case 0x46: ld_mem(&regs.B, val: mem.read(addr: regs.HL))
-        case 0x47: ld_mem(&regs.B, val: regs.A)
-        case 0x48: ld_mem(&regs.C, val: regs.B)
-        case 0x49: ld_mem(&regs.C, val: regs.C)
-        case 0x4a: ld_mem(&regs.C, val: regs.D)
-        case 0x4b: ld_mem(&regs.C, val: regs.E)
-        case 0x4c: ld_mem(&regs.C, val: regs.H)
-        case 0x4d: ld_mem(&regs.C, val: regs.L)
-        case 0x4e: ld_mem(&regs.C, val: mem.read(addr: regs.HL))
-        case 0x4f: ld_mem(&regs.C, val: regs.A)
-        case 0x50: ld_mem(&regs.D, val: regs.B)
-        case 0x51: ld_mem(&regs.D, val: regs.C)
-        case 0x52: ld_mem(&regs.D, val: regs.D)
-        case 0x53: ld_mem(&regs.D, val: regs.E)
-        case 0x54: ld_mem(&regs.D, val: regs.H)
-        case 0x55: ld_mem(&regs.D, val: regs.L)
-        case 0x56: ld_mem(&regs.D, val: mem.read(addr: regs.HL))
-        case 0x57: ld_mem(&regs.D, val: regs.A)
-        case 0x58: ld_mem(&regs.E, val: regs.B)
-        case 0x59: ld_mem(&regs.E, val: regs.C)
-        case 0x5a: ld_mem(&regs.E, val: regs.D)
-        case 0x5b: ld_mem(&regs.E, val: regs.E)
-        case 0x5c: ld_mem(&regs.E, val: regs.H)
-        case 0x5d: ld_mem(&regs.E, val: regs.L)
-        case 0x5e: ld_mem(&regs.E, val: mem.read(addr: regs.HL))
-        case 0x5f: ld_mem(&regs.E, val: regs.A)
-        case 0x60: ld_mem(&regs.H, val: regs.B)
-        case 0x61: ld_mem(&regs.H, val: regs.C)
-        case 0x62: ld_mem(&regs.H, val: regs.D)
-        case 0x63: ld_mem(&regs.H, val: regs.E)
-        case 0x64: ld_mem(&regs.H, val: regs.H)
-        case 0x65: ld_mem(&regs.H, val: regs.L)
-        case 0x66: ld_mem(&regs.H, val: mem.read(addr: regs.HL))
-        case 0x67: ld_mem(&regs.H, val: regs.A)
-        case 0x68: ld_mem(&regs.L, val: regs.B)
-        case 0x69: ld_mem(&regs.L, val: regs.C)
-        case 0x6a: ld_mem(&regs.L, val: regs.D)
-        case 0x6b: ld_mem(&regs.L, val: regs.E)
-        case 0x6c: ld_mem(&regs.L, val: regs.H)
-        case 0x6d: ld_mem(&regs.L, val: regs.L)
-        case 0x6e: ld_mem(&regs.L, val: mem.read(addr: regs.HL))
-        case 0x6f: ld_mem(&regs.L, val: regs.A)
-        case 0x70: ld_mem(addr: regs.HL, val: regs.B, "B")
-        case 0x71: ld_mem(addr: regs.HL, val: regs.C, "C")
-        case 0x72: ld_mem(addr: regs.HL, val: regs.D, "D")
-        case 0x73: ld_mem(addr: regs.HL, val: regs.E, "E")
-        case 0x74: ld_mem(addr: regs.HL, val: regs.H, "H")
-        case 0x75: ld_mem(addr: regs.HL, val: regs.L, "L")
-        case 0x77: ld_mem(addr: regs.HL, val: regs.A, "A")
-        case 0x78: ld_mem(&regs.A, val: regs.B)
-        case 0x79: ld_mem(&regs.A, val: regs.C)
-        case 0x7a: ld_mem(&regs.A, val: regs.D)
-        case 0x7b: ld_mem(&regs.A, val: regs.E)
-        case 0x7c: ld_mem(&regs.A, val: regs.H)
-        case 0x7d: ld_mem(&regs.A, val: regs.L)
-        case 0x7e: ld_mem(&regs.A, val: mem.read(addr: regs.HL))
-        case 0x7f: ld_mem(&regs.A, val: regs.A)
-        case 0x80: add(regs.B)
-        case 0x81: add(regs.C)
-        case 0x82: add(regs.D)
-        case 0x83: add(regs.E)
-        case 0x84: add(regs.H)
-        case 0x85: add(regs.L)
-        case 0x86: add(mem.read(addr: regs.HL))
-        case 0x87: add(regs.A)
-        case 0x88: adc(regs.B)
-        case 0x89: adc(regs.C)
-        case 0x8a: adc(regs.D)
-        case 0x8b: adc(regs.E)
-        case 0x8c: adc(regs.H)
-        case 0x8d: adc(regs.L)
-        case 0x8e: adc(mem.read(addr: regs.HL))
-        case 0x8f: adc(regs.A)
-        case 0x90: sub(regs.B)
-        case 0x91: sub(regs.C)
-        case 0x92: sub(regs.D)
-        case 0x93: sub(regs.E)
-        case 0x94: sub(regs.H)
-        case 0x95: sub(regs.L)
-        case 0x96: sub(mem.read(addr: regs.HL))
-        case 0x97: sub(regs.A)
-        case 0x98: sbc(regs.B)
-        case 0x99: sbc(regs.C)
-        case 0x9a: sbc(regs.D)
-        case 0x9b: sbc(regs.E)
-        case 0x9c: sbc(regs.H)
-        case 0x9d: sbc(regs.L)
-        case 0x9e: sbc(mem.read(addr: regs.HL))
-        case 0x9f: sbc(regs.A)
-        case 0xa0: and(regs.B)
-        case 0xa1: and(regs.C)
-        case 0xa2: and(regs.D)
-        case 0xa3: and(regs.E)
-        case 0xa4: and(regs.H)
-        case 0xa5: and(regs.L)
-        case 0xa6: and(mem.read(addr: regs.HL))
-        case 0xa7: and(regs.A)
-        case 0xa8: xor(regs.B)
-        case 0xa9: xor(regs.C)
-        case 0xaa: xor(regs.D)
-        case 0xab: xor(regs.E)
-        case 0xac: xor(regs.H)
-        case 0xad: xor(regs.L)
-        case 0xae: xor(mem.read(addr: regs.HL))
-        case 0xaf: xor(regs.A)
-        case 0xb0: or(regs.B)
-        case 0xb1: or(regs.C)
-        case 0xb2: or(regs.D)
-        case 0xb3: or(regs.E)
-        case 0xb4: or(regs.H)
-        case 0xb5: or(regs.L)
-        case 0xb6: or(mem.read(addr: regs.HL))
-        case 0xb7: or(regs.A)
-        case 0xb8: cp(regs.B)
-        case 0xb9: cp(regs.C)
-        case 0xba: cp(regs.D)
-        case 0xbb: cp(regs.E)
-        case 0xbc: cp(regs.H)
-        case 0xbd: cp(regs.L)
-        case 0xbe: cp(mem.read(addr: regs.HL), "(HL)[\(mem.read(addr: regs.HL).hex)]")
-        case 0xbf: cp(regs.A)
+        case 0x40...0x47: ld_mem(&regs.B, val: r.pointee)
+        case 0x48...0x4f: ld_mem(&regs.C, val: r.pointee)
+        case 0x50...0x57: ld_mem(&regs.D, val: r.pointee)
+        case 0x58...0x5f: ld_mem(&regs.E, val: r.pointee)
+        case 0x60...0x67: ld_mem(&regs.H, val: r.pointee)
+        case 0x68...0x6f: ld_mem(&regs.L, val: r.pointee)
+        case 0x70...0x77: ld_mem(addr: regs.HL, val: r.pointee)
+        case 0x78...0x7f: ld_mem(&regs.A, val: r.pointee)
+        case 0x80...0x87: add(r.pointee)
+        case 0x88...0x8f: adc(r.pointee)
+        case 0x90...0x97: sub(r.pointee)
+        case 0x98...0x9f: sbc(r.pointee)
+        case 0xa0...0xa7: and(r.pointee)
+        case 0xa8...0xaf: xor(r.pointee)
+        case 0xb0...0xb7: or(r.pointee)
+        case 0xb8...0xbf: cp(r.pointee)
         case 0xc0: ret(condition: !regs.flags.Z)
         case 0xc1:
             regs.C = mem.read(addr: mem.SP)
@@ -301,9 +194,9 @@ class CPU {
         case 0xc4: call(condition: !regs.flags.Z)
         case 0xc5:
             mem.SP-=1
-            ld_mem(addr: mem.SP, val: regs.B, "B")
+            ld_mem(addr: mem.SP, val: regs.B)
             mem.SP-=1
-            ld_mem(addr: mem.SP, val: regs.C, "C")
+            ld_mem(addr: mem.SP, val: regs.C)
         case 0xc6: add(mem.getByte())
         case 0xc7: rst(0x0000)
         case 0xc8: ret(condition: regs.flags.Z)
@@ -324,7 +217,9 @@ class CPU {
             case 0x28: rr(&reg.pointee, carry_any: false)
             case 0x30: swap(&reg.pointee)
             case 0x38: srl(&reg.pointee)
-            case 0x78: bit(&reg.pointee, (CB_HI>>3)&0b111)
+            case 0x40...0x7f: bit(&reg.pointee, (CB_HI>>3)&0b111)
+            case 0x80...0xbf: res(&reg.pointee, (CB_HI>>3)&0b111)
+            case 0xc0...0xff: set(&reg.pointee, (CB_HI>>3)&0b111)
             default:
                 print("Unsupported CB Opcode \(CB.hex) at location \(mem.PC.hex)")
                 print("Follow up bytes: \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) \(mem.getByte().hex) ")
@@ -347,14 +242,15 @@ class CPU {
         case 0xdc: call(condition: regs.flags.C)
         case 0xde: sbc(mem.getByte())
         case 0xdf: rst(0x0018)
-        case 0xe0: ld_mem(addr: 0xFF00 + UInt16(mem.getByte()), val: regs.A, "A")
+        case 0xe0: ld_mem(addr: 0xFF00 + UInt16(mem.getByte()), val: regs.A)
         case 0xe1: pop(&regs.HL, "HL")
-        case 0xe2: ld_mem(addr: 0xFF00 + UInt16(regs.C), val: regs.A, "A")
+        case 0xe2: ld_mem(addr: 0xFF00 + UInt16(regs.C), val: regs.A)
         case 0xe5: push(regs.HL, "HL")
         case 0xe6: and(mem.getByte())
         case 0xe7: rst(0x0020)
+        case 0xe8: add_sp()
         case 0xe9: jmp(condition: true, address: regs.HL)
-        case 0xea: ld_mem(addr: mem.getHalfWord(), val: regs.A, "(u16) A")
+        case 0xea: ld_mem(addr: mem.getHalfWord(), val: regs.A)
         case 0xee: xor(mem.getByte())
         case 0xef: rst(0x0028)
         case 0xf0: ld_mem(&regs.A, val: mem.read(addr: 0xFF00 + UInt16(mem.getByte())))
@@ -364,6 +260,7 @@ class CPU {
         case 0xf5: push(regs.AF, "AF")
         case 0xf6: or(mem.getByte())
         case 0xf7: rst(0x0030)
+        case 0xf8: ld_hl_sp_i()
         case 0xf9: mem.SP = regs.HL
         case 0xfa: ld_mem(&regs.A, val: mem.read(addr: mem.getHalfWord()))
         case 0xfb: interrupts_enabled = true
@@ -417,12 +314,9 @@ class CPU {
         debugLog("LD \(desc)")
     }
     
-    func ld_mem(addr: UInt16, val: UInt8, _ desc: String) {
-        if addr == 0xd81e {
-            debugLog("break me daddy uwu")
-        }
+    func ld_mem(addr: UInt16, val: UInt8) {
         mem.write(addr: addr, val: val)
-        debugLog("LD (\(addr.hex)), \(desc) (\(val))")
+        debugLog("LD (\(addr.hex)), (\(val))")
     }
     
     //  ld immediate - BYTE
@@ -561,9 +455,29 @@ class CPU {
     func add(_ val: UInt16) {
         regs.flags.N = false
         regs.flags.H = (((val & 0xfff) + (regs.HL & 0xfff)) & 0x1000) > 0
-        regs.flags.C = (val & regs.HL) > 0xffff
+        regs.flags.C = (UInt(val) + UInt(regs.HL)) > 0xffff
         regs.HL = regs.HL &+ val
         debugLog("ADD \(val)")
+    }
+    
+    func add_sp() {           //  calc Flags on UNSIGNED byte, store to SP with SIGNED byte!
+        let val = mem.getByte()
+        regs.flags.Z = false
+        regs.flags.N = false
+        regs.flags.H = ((mem.SP & 0xf) + (val.u16 & 0xf)) > 0xf
+        regs.flags.C = ((mem.SP & 0xff) + (val.u16 & 0xff)) > 0xff
+        mem.SP = UInt16(truncatingIfNeeded: Int(mem.SP) &+ Int(Int8(bitPattern: val)))
+        debugLog("ADD_SP \(val)")
+    }
+    
+    func ld_hl_sp_i() {       //  calc Flags on UNSIGNED byte, store to HL with SIGNED byte!
+        let val = mem.getByte()
+        regs.flags.H = ((mem.SP & 0xf) + (val.u16 & 0xf)) > 0xf
+        regs.flags.C = ((mem.SP & 0xff) + (val.u16 & 0xff)) > 0xff
+        regs.HL = UInt16(truncatingIfNeeded: Int(mem.SP) &+ Int(Int8(bitPattern: val)))
+        regs.flags.N = false
+        regs.flags.Z = false
+        debugLog("LD HL, SP+i")
     }
     
     func adc(_ val: UInt8) {
@@ -577,7 +491,7 @@ class CPU {
     }
     
     func rra(rrca: Bool = false) {
-        let oldcarry: UInt8 = regs.flags.C ? 1 : 0
+        let oldcarry: UInt8 = regs.flags.C.int8
         regs.flags.C = (regs.A & 1) > 0
         regs.flags.Z = false
         regs.flags.N = false
@@ -586,7 +500,7 @@ class CPU {
             regs.A = (regs.A >> 1) | (oldcarry << 7)
             debugLog("RRA")
         } else {
-            regs.A = (regs.A >> 1) | ((regs.flags.C ? 1 : 0) << 7)
+            regs.A = (regs.A >> 1) | (regs.flags.C.int8 << 7)
             debugLog("RRCA")
         }
     }
@@ -604,6 +518,28 @@ class CPU {
             regs.A = (regs.A << 1) | regs.flags.C.int8
             debugLog("RLCA")
         }
+    }
+    
+    func daa() {
+        if !regs.flags.N {
+            if (regs.flags.C || regs.A > 0x99) {
+                regs.A &+= 0x60
+                regs.flags.C = true
+            }
+            if (regs.flags.H || (regs.A & 0x0f) > 0x09) {
+                regs.A &+= 0x06
+            }
+        }
+        else {
+            if regs.flags.C {
+                regs.A &-= 0x60
+            }
+            if (regs.flags.H) {
+                regs.A &-= 0x06
+            }
+        }
+        regs.flags.Z = regs.A == 0
+        regs.flags.H = false
     }
     
     func cpl() {
@@ -633,6 +569,16 @@ class CPU {
         regs.flags.N = false
         regs.flags.H = true
         debugLog("BIT \(bit)")
+    }
+    
+    func res(_ a: inout UInt8, _ bit: UInt8) {
+        a = a & ~(1<<bit)
+        debugLog("RES \(bit)")
+    }
+    
+    func set(_ a: inout UInt8, _ bit: UInt8) {
+        a = a | (1<<bit)
+        debugLog("SET \(bit)")
     }
     
     func rl(_ a: inout UInt8, carry_any: Bool = true, keep_carry: Bool = false) {

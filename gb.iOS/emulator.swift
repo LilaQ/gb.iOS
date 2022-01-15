@@ -29,17 +29,55 @@ class EMULATOR {
         
         while(true) {
             cpu.step()
-            if cpu.interrupts_enabled {
-                //  VBlank interrupt
-                if ((mem.read(addr: 0xFFFF) & 1) & (mem.read(addr: 0xFF0F) & 1)) > 0 {
-                    print("VBlank")
-                    cpu.push(mem.PC, "VBlank interrupt, pushing PC to stack")
+            handleInterrupts()
+        }
+        
+    }
+    
+    func handleInterrupts() {
+        
+        let interruptMask: UInt8 = (mem.read(addr: 0xFFFF) & mem.read(addr: 0xFF0F))
+        
+        //  UnHALT on interrupt
+        if (interruptMask > 0) && cpu.regs.flags.HALT {
+            cpu.regs.flags.HALT = false
+        }
+        
+        //  Interrupts are enabled...
+        if cpu.interrupts_enabled {
+            
+            //  Some interrupt is enabled and allowed
+            if interruptMask > 0 {
+                
+                //  Interrupts handled by priority
+                
+                //  VBlank
+                if (interruptMask & 0b001) > 0 {
+                    mem.pushToStack(mem.PC)
                     mem.PC = 0x40
-                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1110)  //  clear interrupt
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1110)
                 }
+                
+                //  LCD Stat
+                if (interruptMask & 0b010) > 0 {
+                    mem.pushToStack(mem.PC)
+                    mem.PC = 0x48
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1101)
+                }
+                
+                //  Timer
+                if (interruptMask & 0b100) > 0 {
+                    mem.pushToStack(mem.PC)
+                    mem.PC = 0x50
+                    mem.write(addr: 0xFF0F, val: mem.read(addr: 0xFF0F) & 0b1111_1011)
+                }
+                
                 cpu.interrupts_enabled = false
             }
         }
+    }
+    
+    func handleTimer() {
         
     }
     

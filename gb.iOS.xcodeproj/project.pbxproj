@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3D5F8924278DAF950071FF2D /* 10-bit ops.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3D5F8923278DAF950071FF2D /* 10-bit ops.gb */; };
+		3D5F8926278DB5BC0071FF2D /* 11-op a,(hl).gb in Resources */ = {isa = PBXBuildFile; fileRef = 3D5F8925278DB5BC0071FF2D /* 11-op a,(hl).gb */; };
+		3D5F89A1279191520071FF2D /* 03-op sp,hl.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3D5F89A0279191520071FF2D /* 03-op sp,hl.gb */; };
+		3D5F89A32792C0A90071FF2D /* 02-interrupts.gb in Resources */ = {isa = PBXBuildFile; fileRef = 3D5F89A22792C0860071FF2D /* 02-interrupts.gb */; };
 		3D8397072787A71700AA0A6F /* gb_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8397062787A71700AA0A6F /* gb_iOSApp.swift */; };
 		3D8397092787A71700AA0A6F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8397082787A71700AA0A6F /* ContentView.swift */; };
 		3D83970B2787A71900AA0A6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D83970A2787A71900AA0A6F /* Assets.xcassets */; };
@@ -46,6 +50,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3D5F8923278DAF950071FF2D /* 10-bit ops.gb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "10-bit ops.gb"; sourceTree = "<group>"; };
+		3D5F8925278DB5BC0071FF2D /* 11-op a,(hl).gb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "11-op a,(hl).gb"; sourceTree = "<group>"; };
+		3D5F89A0279191520071FF2D /* 03-op sp,hl.gb */ = {isa = PBXFileReference; lastKnownFileType = file; name = "03-op sp,hl.gb"; path = "../../../../Downloads/cpu_instrs/individual/03-op sp,hl.gb"; sourceTree = "<group>"; };
+		3D5F89A22792C0860071FF2D /* 02-interrupts.gb */ = {isa = PBXFileReference; lastKnownFileType = file; name = "02-interrupts.gb"; path = "../../../../Downloads/cpu_instrs/individual/02-interrupts.gb"; sourceTree = "<group>"; };
 		3D8397032787A71700AA0A6F /* gb.iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gb.iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3D8397062787A71700AA0A6F /* gb_iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = gb_iOSApp.swift; sourceTree = "<group>"; };
 		3D8397082787A71700AA0A6F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -118,12 +126,16 @@
 		3D8397052787A71700AA0A6F /* gb.iOS */ = {
 			isa = PBXGroup;
 			children = (
+				3D5F89A22792C0860071FF2D /* 02-interrupts.gb */,
+				3D5F89A0279191520071FF2D /* 03-op sp,hl.gb */,
 				3DADFB8B278CDE7000AD2C0C /* 04-op r,imm.gb */,
 				3DADFB8D278CE30400AD2C0C /* 05-op rp.gb */,
 				3DA761F5278B7B950069182E /* 06-ld r,r.gb */,
 				3DADFB89278CBD1400AD2C0C /* 07-jr,jp,call,ret,rst.gb */,
 				3DADFB8F278CE55200AD2C0C /* 08-misc instrs.gb */,
 				3DADFB93278D5D6000AD2C0C /* 09-op r,r.gb */,
+				3D5F8923278DAF950071FF2D /* 10-bit ops.gb */,
+				3D5F8925278DB5BC0071FF2D /* 11-op a,(hl).gb */,
 				3DADFB91278D00B500AD2C0C /* instr_timing.gb */,
 				3DA761F3278AF6F70069182E /* tetris.gb */,
 				3D8397062787A71700AA0A6F /* gb_iOSApp.swift */,
@@ -269,13 +281,17 @@
 			files = (
 				3DADFB94278D5D6000AD2C0C /* 09-op r,r.gb in Resources */,
 				3D83970E2787A71900AA0A6F /* Preview Assets.xcassets in Resources */,
+				3D5F89A32792C0A90071FF2D /* 02-interrupts.gb in Resources */,
 				3D83970B2787A71900AA0A6F /* Assets.xcassets in Resources */,
 				3DA761F6278B7BB80069182E /* 06-ld r,r.gb in Resources */,
+				3D5F89A1279191520071FF2D /* 03-op sp,hl.gb in Resources */,
 				3DADFB8A278CBD1600AD2C0C /* 07-jr,jp,call,ret,rst.gb in Resources */,
 				3DADFB90278CE55500AD2C0C /* 08-misc instrs.gb in Resources */,
 				3DADFB92278D015400AD2C0C /* instr_timing.gb in Resources */,
+				3D5F8924278DAF950071FF2D /* 10-bit ops.gb in Resources */,
 				3DADFB8E278CE30800AD2C0C /* 05-op rp.gb in Resources */,
 				3DADFB8C278CDE7200AD2C0C /* 04-op r,imm.gb in Resources */,
+				3D5F8926278DB5BC0071FF2D /* 11-op a,(hl).gb in Resources */,
 				3DA761F4278B5CB90069182E /* tetris.gb in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

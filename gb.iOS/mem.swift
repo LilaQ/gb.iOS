@@ -88,6 +88,13 @@ class MEMORY {
         getHalfWord(addr: PC)
     }
     
+    func pushToStack(_ a: UInt16) {
+        SP -= 1
+        write(addr: SP, val: a.hiByte)
+        SP -= 1
+        write(addr: SP, val: a.loByte)
+    }
+    
     init() {
         print("MEMORY init")
         
@@ -97,12 +104,16 @@ class MEMORY {
         print("loading ROM...")
 //        let rom = loadRom(forResource: "tetris", withExtension: "gb") ?? []
 //        let rom = loadRom(forResource: "instr_timing", withExtension: "gb") ?? []
+        let rom = loadRom(forResource: "02-interrupts", withExtension: "gb") ?? []                  //
+//        let rom = loadRom(forResource: "03-op sp,hl", withExtension: "gb") ?? []                  //  PASSED
 //        let rom = loadRom(forResource: "04-op r,imm", withExtension: "gb") ?? []                  //  PASSED
-//        let rom = loadRom(forResource: "05-op rp", withExtension: "gb") ?? []                     //  FAILING
+//        let rom = loadRom(forResource: "05-op rp", withExtension: "gb") ?? []                     //  PASSED
 //        let rom = loadRom(forResource: "06-ld r,r", withExtension: "gb") ?? []                    //  PASSED
 //        let rom = loadRom(forResource: "07-jr,jp,call,ret,rst", withExtension: "gb") ?? []        //  PASSED
 //        let rom = loadRom(forResource: "08-misc instrs", withExtension: "gb") ?? []               //  PASSED
-        let rom = loadRom(forResource: "09-op r,r", withExtension: "gb") ?? []                      //  PASSED
+//        let rom = loadRom(forResource: "09-op r,r", withExtension: "gb") ?? []                    //  PASSED
+//        let rom = loadRom(forResource: "10-bit ops", withExtension: "gb") ?? []                   //  PASSED
+//        let rom = loadRom(forResource: "11-op a,(hl)", withExtension: "gb") ?? []                 //  PASSED
         for i in 0..<rom.count {
             memory[i]=rom[i]
         }
